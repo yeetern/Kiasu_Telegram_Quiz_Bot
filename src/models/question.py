@@ -17,7 +17,7 @@ class Question(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     
     # Association with the parent QuizSet
-    quiz_set_id = Column(Integer, ForeignKey("quiz_sets.id"), nullable=False)
+    quiz_set_id = Column(String(8), ForeignKey("quiz_sets.id"), nullable=False)
     
     # Content Metadata
     # content_type: 'text' or 'photo'
