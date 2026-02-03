@@ -1,57 +1,47 @@
 # src/main.py
 import asyncio
 import logging
-import sys
-
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
+from src.handlers import creator, common, attempt  # <-- 加上 attempt
 
-# 导入配置和数据库
-from src.config import config
+
+# ❌ 之前我写错了: from src import config
+# ✅ 修正为: 从 src.config 模块中导入 config 对象
+from src.config import config 
+
 from src.database import init_db
-
-# 导入我们的 Handlers
-from src.handlers import creator, attempt, common
+from src.handlers import creator, common 
 
 async def main():
-    # 1. 配置日志
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        stream=sys.stdout
-    )
-    logger = logging.getLogger(__name__)
-    logger.info("Starting Bot...")
-
-    # 2. 初始化数据库 (建表)
-    logger.info("Initializing Database...")
+    # 1. 初始化数据库
     await init_db()
-
-    # 3. 创建 Bot 和 Dispatcher
-    # 必须显式获取 SecretStr 的真实值
+    
+    # 2. 初始化 Bot
+    # 现在 config 是对象，所以可以访问 .BOT_TOKEN
     bot = Bot(token=config.BOT_TOKEN.get_secret_value())
+    
+    # 3. 初始化 Dispatcher
     dp = Dispatcher(storage=MemoryStorage())
 
-    # 4. 注册路由 (Routers)
-    # 这里的顺序很重要：
-    # attempt (处理 deep link /start xxx)
-    # creator (处理 /newquiz)
-    # common (处理普通 /start 和兜底逻辑)
-    dp.include_router(attempt.router)
+    # 4. 注册路由 (注意顺序！)
+    # 先加载 creator (/newquiz)，防止被 common 拦截
     dp.include_router(creator.router)
-    
-    # 如果你有 common.py 处理普通的 /start 欢迎语，可以保留，
-    # 但要确保 common.py 里的 CommandStart() 不要覆盖掉 attempt 的 deep_link
-    # 或者直接把 common 放在最后
-    if hasattr(common, 'router'):
-        dp.include_router(common.router)
 
-    # 5. 开始轮询
-    logger.info("Bot is ready! Polling updates...")
+    # ✅ 去掉注释，启用做题功能
+    dp.include_router(attempt.router) 
+
+    dp.include_router(common.router)
+
+    logging.info("Starting Bot...")
+    
+    # 删除 Webhook 防止冲突
+    await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     try:
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
-        print("Bot stopped!")
+        logging.info("Bot stopped!")

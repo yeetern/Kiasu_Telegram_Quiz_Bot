@@ -1,190 +1,168 @@
 # src/handlers/attempt.py
+import json
 from aiogram import Router, F
 from aiogram.filters import CommandStart, CommandObject
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
 from sqlalchemy import select
 
+# 引入数据库和模型
 from src.database import get_db
 from src.models import QuizSet, Question
 
 router = Router()
 
-# ==========================
-# 1. 启动试卷 (Deep Linking)
-# ==========================
+# 定义做题的状态
+class QuizAttempt(StatesGroup):
+    in_progress = State()  # 正在做题中
+
+# ==========================================
+# 1. 入口：处理深层链接 /start <quiz_id>
+# ==========================================
 @router.message(CommandStart(deep_link=True))
 async def cmd_start_quiz(message: Message, command: CommandObject, state: FSMContext):
-    """
-    当用户点击链接 t.me/bot?start=quiz_id 时触发
-    """
-    quiz_id = command.args # 获取 URL 中的参数
+    quiz_id = command.args  # 获取链接后面的参数 (UUID)
     
     async for session in get_db():
-        # 1. 检查试卷是否存在
+        # 1. 找试卷
         result = await session.execute(select(QuizSet).where(QuizSet.id == quiz_id))
-        quiz = result.scalars().first()
+        quiz = result.scalar_one_or_none()
         
         if not quiz:
-            await message.answer("❌ 找不到该试卷，可能已被删除或链接无效。")
+            await message.answer("⚠️ 找不到这张试卷，可能已被删除。")
             return
 
-        # 2. 获取该试卷所有题目的 ID (按 ID 排序)
-        # 直接查 Question 表比较稳妥，避免异步延迟加载问题
+        # 2. 找题目 (按 ID 排序)
         q_result = await session.execute(
-            select(Question.id).where(Question.quiz_set_id == quiz_id).order_by(Question.id)
+            select(Question).where(Question.quiz_set_id == quiz_id).order_by(Question.id)
         )
-        question_ids = q_result.scalars().all()
+        questions = q_result.scalars().all()
         
-        if not question_ids:
-            await message.answer("⚠️ 这套试卷似乎还没有题目。")
+        if not questions:
+            await message.answer("⚠️ 这张试卷里没有题目！")
             return
-            
-        # 3. 初始化做题状态
+
+        # 3. 初始化状态
+        # 我们只存题目的 ID 列表，节省内存
+        q_ids = [q.id for q in questions]
+        
+        # 将必要信息存入 FSM 状态储存
         await state.update_data(
-            quiz_id=quiz_id,
-            q_ids=question_ids,  # 题目ID列表
-            current_index=0,     # 当前第几题 (索引)
-            score=0              # 当前得分
+            quiz_title=quiz.name,
+            q_ids=q_ids,
+            current_index=0,
+            score=0,
+            total=len(q_ids)
         )
-        
-        await message.answer(
-            f"📝 **准备开始: {quiz.name}**\n"
-            f"共 {len(question_ids)} 题。\n\n"
-            "正在加载第 1 题...",
-            parse_mode="Markdown"
-        )
-        
-        # 发送第一题
-        await send_current_question(message, state, session)
-        break
+        await state.set_state(QuizAttempt.in_progress)
 
+        # 4. 发送第一题
+        await message.answer(f"📝 **开始答题：{quiz.name}**\n共 {len(q_ids)} 题", parse_mode="Markdown")
+        await send_question(message, state, questions[0])
 
-# ==========================
-# 2. 发送当前题目的辅助函数
-# ==========================
-async def send_current_question(message_or_callback, state: FSMContext, session):
+# ==========================================
+# 2. 核心逻辑：发送题目
+# ==========================================
+async def send_question(message: Message, state: FSMContext, question: Question):
     data = await state.get_data()
     index = data['current_index']
-    q_ids = data['q_ids']
-    
-    # 检查是否已做完
-    if index >= len(q_ids):
-        score = data['score']
-        total = len(q_ids)
-        percentage = int((score / total) * 100)
-        
-        # 简单的评语
-        comment = "太棒了！🎉" if percentage >= 80 else "继续加油！💪"
-        
-        text = (
-            f"🏁 **试卷完成！**\n\n"
-            f"✅ 得分: {score} / {total}\n"
-            f"📊 正确率: {percentage}%\n\n"
-            f"{comment}"
-        )
-        
-        # 如果是 callback (点击选项触发的)，用 edit_text；如果是 message (刚开始)，用 answer
-        if isinstance(message_or_callback, CallbackQuery):
-            await message_or_callback.message.answer(text, parse_mode="Markdown")
-        else:
-            await message_or_callback.answer(text, parse_mode="Markdown")
-            
-        await state.clear()
-        return
+    total = data['total']
 
-    # 获取题目详情
-    q_id = q_ids[index]
-    result = await session.execute(select(Question).where(Question.id == q_id))
-    question = result.scalars().first()
-    
-    if not question:
-        await message_or_callback.answer("题目加载失败，跳过。")
-        await state.update_data(current_index=index + 1)
-        await send_current_question(message_or_callback, state, session)
-        return
-
-    # 构建选项按钮 (Inline Keyboard)
+    # 构建选项按钮
+    # options_data 是一个列表: [{"id": "A", "text": "xxx"}, ...]
     buttons = []
-    # options_data 结构: [{"id":"A", "text":"..."}, {"id":"B", "text":"..."}]
-    # 每行放 1 个选项，防止太长显示不下
-    for opt in question.options_data:
-        btn_text = f"{opt['id']}. {opt['text']}"
-        # callback_data 格式: ans:题目ID:用户选的ID
-        c_data = f"ans:{question.id}:{opt['id']}" 
-        buttons.append([InlineKeyboardButton(text=btn_text, callback_data=c_data)])
+    
+    # 兼容性处理：有时候数据库读出来可能是字符串
+    options = question.options_data
+    if isinstance(options, str):
+        options = json.loads(options)
+        
+    # 构造 Inline 键盘 (每行一个选项)
+    for opt in options:
+        # callback_data 格式: ans:选项ID
+        buttons.append([
+            InlineKeyboardButton(text=f"{opt['id']}. {opt['text']}", callback_data=f"ans:{opt['id']}")
+        ])
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     
-    caption_text = f"📋 **第 {index + 1} / {len(q_ids)} 题**"
+    question_text = f"**第 {index + 1}/{total} 题**"
     
-    # 根据是 message 还是 callback 决定发送方式
-    # 这里为了简单，统一发送新消息 (旧消息保留作为记录)
-    target = message_or_callback.message if isinstance(message_or_callback, CallbackQuery) else message_or_callback
-    
+    # 根据类型发送 (图片或纯文字)
     if question.content_type == 'photo':
-        await target.answer_photo(
+        await message.answer_photo(
             photo=question.content_data,
-            caption=caption_text,
+            caption=question_text,
             reply_markup=keyboard,
             parse_mode="Markdown"
         )
     else:
-        await target.answer(
-            text=f"{caption_text}\n\n{question.content_data}",
-            reply_markup=keyboard,
-            parse_mode="Markdown"
-        )
+        # 纯文字
+        text_content = f"{question_text}\n\n{question.content_data}"
+        await message.answer(text_content, reply_markup=keyboard, parse_mode="Markdown")
 
-
-# ==========================
-# 3. 处理答案点击
-# ==========================
-@router.callback_query(F.data.startswith("ans:"))
+# ==========================================
+# 3. 交互：处理用户点击选项
+# ==========================================
+@router.callback_query(QuizAttempt.in_progress, F.data.startswith("ans:"))
 async def handle_answer(callback: CallbackQuery, state: FSMContext):
-    # 解析数据: ans:123:A
-    parts = callback.data.split(":")
-    if len(parts) != 3:
-        await callback.answer("Error")
-        return
-        
-    _, q_id_str, user_choice = parts
-    q_id = int(q_id_str)
+    user_choice = callback.data.split(":")[1] # 获取 'A', 'B' 等
     
+    data = await state.get_data()
+    current_index = data['current_index']
+    q_ids = data['q_ids']
+    
+    # 获取当前题目信息进行对比
+    current_q_id = q_ids[current_index]
+    
+    # 查库获取正确答案和解析
     async for session in get_db():
-        # 查答案
-        result = await session.execute(select(Question).where(Question.id == q_id))
-        question = result.scalars().first()
+        q_result = await session.execute(select(Question).where(Question.id == current_q_id))
+        question = q_result.scalar_one()
         
-        data = await state.get_data()
-        current_score = data.get('score', 0)
-        
-        # 判断对错
         is_correct = (user_choice == question.correct_option)
+        correct_opt = question.correct_option
+        hint = question.hint or "无"
+
+    # 计分逻辑
+    if is_correct:
+        await state.update_data(score=data['score'] + 1)
+        feedback = f"✅ **回答正确!**"
+    else:
+        feedback = f"❌ **回答错误!**\n正确答案是: **{correct_opt}**"
+    
+    # 如果有解析，加上解析
+    if hint and hint != "无":
+        feedback += f"\n💡 解析: {hint}"
+
+    # 弹窗提示结果 (show_alert=True 会有弹窗，False 只是上方浮动提示，推荐 True)
+    await callback.answer(feedback, show_alert=True)
+    
+    # 准备下一题
+    next_index = current_index + 1
+    
+    if next_index < data['total']:
+        # 还有下一题 -> 更新 index -> 发送下一题
+        await state.update_data(current_index=next_index)
         
-        if is_correct:
-            current_score += 1
-            feedback = f"✅ **正确！**\n选了 {user_choice}"
-        else:
-            feedback = (
-                f"❌ **错误** (你选了 {user_choice})\n"
-                f"🔑 正确答案: **{question.correct_option}**\n\n"
-                f"💡 **解析/Hint**: {question.hint or '暂无'}"
-            )
-            
-        # 弹窗提示结果 (Toast Notification)
-        # await callback.answer(feedback, show_alert=True) # 如果想要弹窗可以用这个
-        await callback.answer() # 消除加载转圈
+        async for session in get_db():
+            next_q_result = await session.execute(select(Question).where(Question.id == q_ids[next_index]))
+            next_q = next_q_result.scalar_one()
+            # 发送下一题 (注意：这里用 callback.message 继续在当前对话发送)
+            await send_question(callback.message, state, next_q)
+    else:
+        # 全部做完 -> 结算
+        # 重新获取一次最新分数
+        final_data = await state.get_data()
+        final_score = final_data['score']
+        total = data['total']
+        percentage = int((final_score / total) * 100)
         
-        # 发送反馈消息
-        await callback.message.reply(feedback, parse_mode="Markdown")
-        
-        # 更新状态
-        await state.update_data(
-            score=current_score,
-            current_index=data['current_index'] + 1
+        result_text = (
+            f"🏁 **测试结束!**\n\n"
+            f"📊 你的得分: **{final_score} / {total}**\n"
+            f"📈 正确率: **{percentage}%**"
         )
-        
-        # 发送下一题
-        await send_current_question(callback, state, session)
-        break
+        await callback.message.answer(result_text, parse_mode="Markdown")
+        await state.clear() # 清除状态，结束会话
