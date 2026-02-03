@@ -1,29 +1,37 @@
-from sqlalchemy import String, Boolean, JSON, Text
-from sqlalchemy.orm import Mapped, mapped_column
+# src/models/question.py
+from sqlalchemy import Column, Integer, String, ForeignKey, JSON, Boolean
+from sqlalchemy.orm import relationship
 from src.database import Base
 
 class Question(Base):
     __tablename__ = "questions"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     
-    # 题目图片 (Telegram file_id)
-    # 也可以存 URL，但 MVP 我们先假设是 file_id
-    image_file_id: Mapped[str] = mapped_column(String(255), nullable=True)
+    # --- 新增的外键：关联到 QuizSet ---
+    quiz_set_id = Column(String, ForeignKey("quiz_sets.id"), nullable=False)
     
-    # 题目元数据
-    subject: Mapped[str] = mapped_column(String(50))   # e.g., "Physics"
-    topic: Mapped[str] = mapped_column(String(100))    # e.g., "Force and Motion"
+    # --- 内容字段 ---
+    # content_type: 'text' 或 'photo'
+    content_type = Column(String, default="text", nullable=False)
+    # content_data: 如果是 text 存题目文本，如果是 photo 存 file_id
+    content_data = Column(String, nullable=False)
     
-    # 选项与答案
-    # 简化版：题目文字直接写在 caption 里，这里只存正确选项
-    correct_option: Mapped[str] = mapped_column(String(1)) # "A", "B", "C", "D"
+    # --- 提示与解析 ---
+    hint = Column(String, nullable=True)
     
-    # 核心教育价值：引用信息
-    # 存成 JSON: {"textbook": "Form 4 Physics", "page": 23, "explanation": "..."}
-    reference_data: Mapped[dict] = mapped_column(JSON, default={})
+    # --- 选项数据 ---
+    # 存 JSON 格式: [{"id": "A", "text": "10N"}, {"id": "B", "text": "20N"}]
+    options_data = Column(JSON, nullable=False)
     
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # --- 正确答案 ---
+    # 存: "A", "B", "C", or "D"
+    correct_option = Column(String, nullable=False)
+
+    is_active = Column(Boolean, default=True)
+
+    # --- 反向关联 ---
+    quiz_set = relationship("QuizSet", back_populates="questions")
 
     def __repr__(self):
-        return f"<Question(id={self.id}, subject='{self.subject}')>"
+        return f"<Question(id={self.id}, type={self.content_type}, ans={self.correct_option})>"
