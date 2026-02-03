@@ -1,0 +1,16 @@
+[project]
+name = "kiasu_quiz_bot"
+version = "0.1.0"
+description = "SPM Telegram Quiz Bot"
+requires-python = ">=3.11"
+dependencies = [
+    "aiogram>=3.0.0",          # Telegram Bot 框架
+    "sqlalchemy>=2.0.0",       # ORM
+    "asyncpg>=0.29.0",         # 异步 Postgres 驱动
+    "pydantic-settings>=2.0.0",# 专业的配置管理
+    "python-dotenv>=1.0.0"     # 读取 .env
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
