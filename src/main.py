@@ -1,47 +1,70 @@
-# src/main.py
+"""
+Main Entry Point - Project Kancil
+Initializes database connections, configures the AIOGram dispatcher, 
+and manages the bot's polling lifecycle.
+"""
+
 import asyncio
 import logging
+import sys
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
-from src.handlers import creator, common, attempt  # <-- 加上 attempt
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
 
-
-# ❌ 之前我写错了: from src import config
-# ✅ 修正为: 从 src.config 模块中导入 config 对象
+# Configuration and Database
 from src.config import config 
-
 from src.database import init_db
-from src.handlers import creator, common 
+
+# Handlers
+from src.handlers import creator, common, attempt 
 
 async def main():
-    # 1. 初始化数据库
+    # 1. Initialize Database
+    # Ensures tables are created and the async engine is ready.
     await init_db()
     
-    # 2. 初始化 Bot
-    # 现在 config 是对象，所以可以访问 .BOT_TOKEN
-    bot = Bot(token=config.BOT_TOKEN.get_secret_value())
+    # 2. Initialize Bot 
+    # Using DefaultBotProperties for consistent Markdown rendering.
+    bot = Bot(
+        token=config.BOT_TOKEN.get_secret_value(),
+        default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN)
+    )
     
-    # 3. 初始化 Dispatcher
+    # 3. Initialize Dispatcher
+    # We use MemoryStorage for the MVP. For scaling, this can be swapped for Redis.
     dp = Dispatcher(storage=MemoryStorage())
 
-    # 4. 注册路由 (注意顺序！)
-    # 先加载 creator (/newquiz)，防止被 common 拦截
+    # 4. Register Routers (Order is critical!)
+    # Higher priority routers are registered first.
+    
+    # Priority 1: Quiz Creation (Educator Flow)
     dp.include_router(creator.router)
 
-    # ✅ 去掉注释，启用做题功能
+    # Priority 2: Quiz Attempt (Student Flow - handles deep links via /start)
     dp.include_router(attempt.router) 
 
+    # Priority 3: Common (Global commands like general /start or /help)
+    # This acts as a fallback for start commands without arguments.
     dp.include_router(common.router)
 
-    logging.info("Starting Bot...")
+    logging.info("Project Kancil is online. Polling started...")
     
-    # 删除 Webhook 防止冲突
+    # Remove any pending updates from Telegram servers to prevent spam on startup
     await bot.delete_webhook(drop_pending_updates=True)
+    
+    # 5. Execution
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    # Standard logging configuration for production-ready output
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        stream=sys.stdout
+    )
+    
     try:
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
-        logging.info("Bot stopped!")
+        logging.info("Bot stopped successfully. Goodbye!")

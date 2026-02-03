@@ -1,25 +1,37 @@
+version: '3.8'
+
 services:
+  # 🤖 Project Kancil Bot Service
   bot:
     build: .
-    env_file: ".env"
+    container_name: kancil_bot
+    env_file: 
+      - .env
     depends_on:
       db:
         condition: service_healthy
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
+  # 🐘 Database Service (PostgreSQL)
   db:
     image: postgres:16-alpine
+    container_name: kancil_postgres
     restart: always
     environment:
-      POSTGRES_USER: kiasu_user
-      POSTGRES_PASSWORD: kiasu_password
-      POSTGRES_DB: kiasu_db
+      POSTGRES_USER: ${POSTGRES_USER:-kiasu_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kiasu_password}
+      POSTGRES_DB: ${POSTGRES_DB:-kiasu_db}
     ports:
-      - "5432:5432"  # 允许你用本地工具 (DBeaver) 连接查看
+      - "5432:5432"  # Allows local debugging via tools like DBeaver or pgAdmin
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U kiasu_user -d kiasu_db"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-kiasu_user} -d $${POSTGRES_DB:-kiasu_db}"]
       interval: 5s
       timeout: 5s
       retries: 5

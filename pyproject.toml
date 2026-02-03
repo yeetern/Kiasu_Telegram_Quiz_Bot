@@ -1,16 +1,31 @@
 [project]
-name = "kiasu_quiz_bot"
+name = "project_kancil"
 version = "0.1.0"
-description = "SPM Telegram Quiz Bot"
+description = "A failure-safe, instructional Telegram Quiz Bot for SPM students."
+readme = "README.md"
 requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
 dependencies = [
-    "aiogram>=3.0.0",          # Telegram Bot 框架
-    "sqlalchemy>=2.0.0",       # ORM
-    "asyncpg>=0.29.0",         # 异步 Postgres 驱动
-    "pydantic-settings>=2.0.0",# 专业的配置管理
-    "python-dotenv>=1.0.0"     # 读取 .env
+    "aiogram>=3.0.0",           # Modern asynchronous Telegram Bot framework
+    "sqlalchemy>=2.0.0",        # SQL Toolkit and Object Relational Mapper (v2 Async)
+    "asyncpg>=0.29.0",          # High-performance asyncio Postgres driver
+    "pydantic-settings>=2.0.0", # Type-safe configuration management
+    "python-dotenv>=1.0.0"      # Environment variable loader
 ]
 
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
 [tool.ruff]
+# Ruff is an extremely fast Python linter and code formatter.
 line-length = 88
 target-version = "py311"
+select = ["E", "F", "I"] # Error, Pyflakes, and Isort (import sorting)
+ignore = []
+
+[tool.ruff.isort]
+known-first-party = ["src"]

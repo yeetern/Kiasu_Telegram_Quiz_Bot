@@ -1,9 +1,18 @@
-# src/states.py
+"""
+FSM State Definitions - Project Kancil
+Defines the Finite State Machine (FSM) categories to track user progress 
+through quiz creation and participation flows.
+"""
+
 from aiogram.fsm.state import State, StatesGroup
 
 class QuizCreation(StatesGroup):
-    naming = State()              # 1. 命名
-    waiting_for_content = State() # 2. 等待题目内容(图/文)
-    waiting_for_hint = State()    # 3. 等待 Hint
-    waiting_for_poll = State()    # 4. 等待设置选项(A/B/C/D)
-    confirm_next = State()        # 5. 确认下一题或结束
+    """States for the Educator's quiz creation workflow."""
+    naming = State()               # Inputting the quiz set title
+    waiting_for_content = State()  # Sending question text or images
+    waiting_for_hint = State()     # Adding optional instructional feedback/references
+    confirm_next = State()         # Deciding to add another question or finalize
+
+class QuizAttempt(StatesGroup):
+    """States for the Student's practice session."""
+    in_progress = State()          # Actively answering questions in a session

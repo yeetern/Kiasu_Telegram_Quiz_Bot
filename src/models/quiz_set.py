@@ -1,22 +1,43 @@
-# src/models/quiz_set.py
+"""
+QuizSet Model - Project Kancil
+Defines the container for a collection of questions, representing 
+a specific practice paper or instructional module.
+"""
+
 import uuid
-from sqlalchemy import Column, String, BigInteger, Integer
-from sqlalchemy.orm import relationship
+from sqlalchemy import String, BigInteger
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.database import Base
 
 class QuizSet(Base):
+    """
+    Represents a quiz paper created by an educator.
+    Uses a shortened UUID as the primary key for cleaner Telegram deep links.
+    """
     __tablename__ = "quiz_sets"
 
-    # 使用 UUID 字符串作为主键，生成 8 位短 ID (例如: 'a1b2c3d4')
-    # 这样生成的链接比较短: t.me/bot?start=a1b2c3d4
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4())[:8])
+    # Primary Key: Shortened UUID (8 characters)
+    # Example deep link: https://t.me/KancilBot?start=a1b2c3d4
+    id: Mapped[str] = mapped_column(
+        String(8), 
+        primary_key=True, 
+        default=lambda: str(uuid.uuid4())[:8]
+    )
     
-    name = Column(String, nullable=False)          # 试卷名称 (e.g. Physics Paper A)
-    creator_id = Column(BigInteger, nullable=False) # 创建者的 Telegram User ID
+    # Name/Title of the Quiz (e.g., "Physics Form 4: Heat")
+    name: Mapped[str] = mapped_column(String, nullable=False)
     
-    # 关联题目 (One-to-Many)
-    # cascade="all, delete-orphan" 表示删除试卷时，里面的题目也会被删除
-    questions = relationship("Question", back_populates="quiz_set", cascade="all, delete-orphan")
+    # Telegram User ID of the Educator who created this set
+    creator_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    
+    # Relationship: One QuizSet contains many Questions.
+    # cascade="all, delete-orphan" ensures child questions are deleted 
+    # if the QuizSet is removed.
+    questions: Mapped[list["Question"]] = relationship(
+        "Question", 
+        back_populates="quiz_set", 
+        cascade="all, delete-orphan"
+    )
 
-    def __repr__(self):
-        return f"<QuizSet(id={self.id}, name={self.name})>"
+    def __repr__(self) -> str:
+        return f"<QuizSet(id='{self.id}', name='{self.name}')>"

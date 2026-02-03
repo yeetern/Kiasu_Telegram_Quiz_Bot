@@ -1,37 +1,49 @@
-# src/models/question.py
+"""
+Question Model - Project Kancil
+Defines the structure for individual quiz questions, supporting 
+multimodal content (text/photo) and instructional metadata.
+"""
+
 from sqlalchemy import Column, Integer, String, ForeignKey, JSON, Boolean
 from sqlalchemy.orm import relationship
 from src.database import Base
 
 class Question(Base):
+    """
+    Represents a single MCQ question within a QuizSet.
+    """
     __tablename__ = "questions"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     
-    # --- 新增的外键：关联到 QuizSet ---
-    quiz_set_id = Column(String, ForeignKey("quiz_sets.id"), nullable=False)
+    # Association with the parent QuizSet
+    quiz_set_id = Column(Integer, ForeignKey("quiz_sets.id"), nullable=False)
     
-    # --- 内容字段 ---
-    # content_type: 'text' 或 'photo'
+    # Content Metadata
+    # content_type: 'text' or 'photo'
     content_type = Column(String, default="text", nullable=False)
-    # content_data: 如果是 text 存题目文本，如果是 photo 存 file_id
+    
+    # content_data: Stores raw text or the Telegram file_id
     content_data = Column(String, nullable=False)
     
-    # --- 提示与解析 ---
+    # Instructional hint or reference (Subject, Chapter, Page)
     hint = Column(String, nullable=True)
     
-    # --- 选项数据 ---
-    # 存 JSON 格式: [{"id": "A", "text": "10N"}, {"id": "B", "text": "20N"}]
+    # Option Data
+    # Format: [{"id": "A", "text": "Option A Content"}, ...]
     options_data = Column(JSON, nullable=False)
     
-    # --- 正确答案 ---
-    # 存: "A", "B", "C", or "D"
+    # The identifier for the correct choice (e.g., 'A', 'B', 'C', or 'D')
     correct_option = Column(String, nullable=False)
 
+    # Status flag for soft-deletion or moderation
     is_active = Column(Boolean, default=True)
 
-    # --- 反向关联 ---
+    # Relationship mapping back to the QuizSet
     quiz_set = relationship("QuizSet", back_populates="questions")
 
     def __repr__(self):
-        return f"<Question(id={self.id}, type={self.content_type}, ans={self.correct_option})>"
+        return (
+            f"<Question(id={self.id}, type='{self.content_type}', "
+            f"correct='{self.correct_option}')>"
+        )

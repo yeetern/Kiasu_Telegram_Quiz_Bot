@@ -1,1 +1,44 @@
+# ==========================================
+# 1. SECURITY & SECRETS (Critical)
+# ==========================================
+# Never commit your bot tokens or private credentials
 .env
+*.env
+auth.json
+
+# ==========================================
+# 2. DATABASE & VOLUMES
+# ==========================================
+# Exclude the actual database data stored by Docker
+postgres_data/
+*.db
+*.sqlite3
+
+# ==========================================
+# 3. PYTHON & DEPENDENCIES
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+build/
+dist/
+*.egg-info/
+
+# ==========================================
+# 4. SYSTEM & IDEs
+# ==========================================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ==========================================
+# 5. LOGS
+# ==========================================
+*.log
+logs/

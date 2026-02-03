@@ -1,192 +1,217 @@
-# Kiasu Telegram Quiz Bot (Project Kancil)
+# 🐿️ Kiasu Telegram Quiz Bot
 
-> **Safe to fail, optimized to learn.**  
-> An open-source Telegram quiz bot designed for SPM students.
+### *Project Kancil — Safe to Fail, Optimized to Learn*
 
----
+> **This is not a quiz bot.
+> This is a private, failure-safe learning system — disguised as a Telegram bot.**
 
-## 📌 Overview
-
-**Kiasu Telegram Quiz Bot** is an open-source educational Telegram bot built for Malaysian **SPM students**, focusing on **low-pressure practice**, **active recall** and **instructional feedback**.
-
-Unlike traditional quiz bots that only show scores, this project is designed to:
-
-- Support students who are **afraid to answer publicly**
-- Turn mistakes into **guided learning opportunities**
-- Bridge the gap between **practice questions and textbooks**
-- Demonstrate **production-quality backend engineering** in an EdTech context
+An open-source educational platform designed for **SPM students**, where **mistakes are expected, private and instructional**.
 
 ---
 
-## 🎯 Core Philosophy
+## 🌱 Why Project Kancil Exists
 
-> **Fail safely → Get feedback → Return to textbook → Reinforce learning**
+Most digital quiz systems are built around **competition, exposure and ranking**.
+They optimize for speed and scores — **not understanding**.
 
-- Failure should be safe and private  
-- Every mistake should come with feedback  
-- Feedback must point back to the learning source  
-- Learning quality matters more than rankings  
+Project Kancil takes a different stance:
+> **Learning does not require public failure.
+> It requires safe attempts and meaningful feedback.**
 
----
-
-## ✨ Key Features
-
-### ✅ Private 1-to-1 Practice (Sprint 1 – MVP)
-- Students interact with the bot via **private chat**
-- MCQ format (A / B / C / D)
-- Immediate correctness feedback after submission
-- Automatic instructional references (subject, chapter, page, note)
-
-Example feedback:
-```
-❌ Incorrect
-Correct answer: C
-📘 Reference: Physics Form 4, Chapter 2, Page 123
-💡 Newton’s Second Law: F = ma
-```
-
+This project was built to answer one question:
+> *How can we turn every wrong answer into a constructive learning event — without shame, pressure or surveillance?*
 
 ---
 
-### 🧠 Instructional Feedback System (Core Feature)
-Each question can be linked to structured metadata:
-- Subject (Physics, Chemistry, Add Math, etc.)
-- Level (Form 4 / Form 5)
-- Chapter / Topic
-- Textbook page number
-- Short conceptual explanation
+## 🧠 Core Learning Philosophy
 
-Mistakes are treated as **entry points for learning**, not penalties.
+### **Attempt → Fail Safely → Receive Feedback → Reinforce via Reference**
 
----
+* **Private by Default**
+  All practice happens in 1-to-1 chats. No public leaderboards. No social comparison.
 
-## 🚧 Project Status
+* **Failure as a Feature**
+  A wrong answer is not an endpoint — it is the *entry point* to explanation.
 
-🚧 **Work in Progress — Sprint 1**
+* **Contextual Reinforcement**
+  Every mistake is followed by:
+  * *Why it is wrong*
+  * *Where to relearn it* (Subject · Chapter · Page / Hint)
 
-Current focus:
-- Private (DM) practice workflow
-- Single-question interaction
-- Stable and reproducible development environment
+This design is inspired by **formative assessment**, not exam ranking.
 
 ---
 
-## 🧩 Tech Stack
+## 🎓 Who This Is For
 
-| Layer | Technology |
-|---|---|
-| Bot Framework | Python 3.11 + aiogram 3.x |
-| Database | PostgreSQL 16 |
-| Containerization | Docker & Docker Compose |
-| State (MVP) | In-memory FSM |
-| Deployment | Polling (Webhook deferred) |
+* **SPM students** who want to practice without fear
+* **Educators** who want to distribute guided practice safely
+* **Schools / NGOs** looking for low-friction, privacy-first learning tools
+* **Developers** interested in FSM-driven, async, production-grade bot architecture
 
 ---
 
-## 🏗️ Design Principles
+## ✨ What Makes This Different
 
-- Simple first, scalable later  
-- Avoid premature abstraction  
-- Clear scope per sprint  
-- Engineering discipline over quick scripts  
+### 🛠️ Educator-First Quiz Creation
+
+* Create quizzes **directly inside Telegram**
+* Upload:
+
+  * Text questions **or**
+  * Screenshot/photo-based questions
+* Define:
+
+  * Correct option
+  * Instructional hint or reference
+* Generate a **deep link** for instant student access
+
+  ```
+  t.me/yourbot?start=quiz_id
+  ```
+
+No dashboards. No LMS setup. No accounts.
 
 ---
 
-## 🗂️ Project Structure
+### ✅ Student Practice Experience
+
+* **One question at a time**
+* **Immediate feedback**
+* **Private mistakes**
+* **Actionable hints instead of penalties**
+
+Students engage with *understanding*, not anxiety.
+
+---
+
+## 🔍 How It Works (Conceptual Flow)
 
 ```text
-Kiasu_Telegram_Quiz_Bot/
-├── .env.example        # Environment variable template
-├── .gitignore
-├── Dockerfile
-├── docker-compose.yml
-├── pyproject.toml
-├── README.md
-└── src/
-    ├── main.py         # Application entry point
-    ├── config.py       # Configuration loader
-    ├── database.py    # Database connection
-    ├── handlers/      # Telegram handlers
-    ├── models/        # Database models
-    └── services/      # Business logic
+Educator creates quiz
+ → Bot stores structured question data
+ → Deep link is generated
+ → Student opens link (private chat)
+ → Question is delivered
+ → Student answers
+ → Bot returns:
+      ✓ Correct / ✗ Incorrect
+      + Explanation / Hint
+ → Learning reinforced safely
 ```
+
+No public records. No exposure. No shaming.
 
 ---
 
-## ▶️ Quickstart (Local Development)
-### 1️⃣ Requirements
-- Docker & Docker Compose
-- Telegram Bot Token (via @BotFather)
-### 2️⃣ Environment Setup
-```bash
-cp .env.example .env
-# Fill in your BOT_TOKEN
-```
-### 3️⃣ Run the Project
-```bash
-docker compose up --build
-```
-### 4️⃣ Test the Bot
-Open Telegram and send:
-```bash
-/start
-```
+## 🧩 Why Telegram?
+
+Telegram is chosen **deliberately**, not accidentally.
+
+* **Private by Design** — 1-to-1 chats reduce fear of failure
+* **Low Barrier** — no login, no new app, no device requirements
+* **Excellent Media Handling** — ideal for image-based questions
+* **Accessible** — works well in low-resource and mobile-first environments
+
+Telegram is not used for virality —
+it is used for **frictionless, private learning**.
+
+---
+
+## 🏗️ Technical Architecture (Production-Grade)
+
+| Layer            | Technology                          |
+| ---------------- | ----------------------------------- |
+| Bot Framework    | **Aiogram 3.x** (Async, modern FSM) |
+| Database         | **PostgreSQL 16**                   |
+| ORM              | **SQLAlchemy 2.0 (Async)**          |
+| State Management | Aiogram FSM (Redis-ready)           |
+| Deployment       | Docker & Docker Compose             |
+
+### Engineering Principles
+
+* Explicit state transitions (FSM)
+* Async I/O end-to-end
+* Clear separation of creation vs attempt flows
+* No business logic in handlers without state control
+
+This is **not** a toy bot.
+
+---
+
+## 🔐 Privacy & Ethics (Non-Negotiable)
+
+* ❌ No phone numbers collected
+* ❌ No personal identifiers beyond Telegram user ID
+* ❌ No exam papers stored
+* ❌ No copyrighted images hosted
+
+Only **Telegram `file_id` references** are saved.
+The system acts as a **learning index**, not a content host.
+
+---
+
+## 🚫 Non-Goals (What This Project Will Never Be)
+
+To avoid misuse and scope creep:
+
+* ❌ Not a content hosting platform
+* ❌ Not a public ranking or leaderboard system
+* ❌ Not an exam paper distributor
+* ❌ Not a surveillance or performance tracking tool
+
+Learning > metrics.
 
 ---
 
 ## 🧪 Roadmap
-### Sprint 1 – Private Practice MVP
-- Private chat practice
-- Single question per session
-- Instructional reference feedback
-### Sprint 2 – Group Session Mode
-- Timed group quizzes
-- Delayed result reveal
-- Top-3 leaderboard only (no public error list)
-### Sprint 3 – Learning Analytics
-- Subject-level performance tracking
-- Weak-topic detection
-- Exportable learning summaries
 
----
+### Sprint 1 — Private Practice MVP ✅
 
-## ⚖️ Copyright & Ethics
-- This repository does not include any past-year exam papers
-- No copyrighted images are stored
-- Only Telegram file_id / message_id references are saved
-- The bot acts as a learning index and feedback system, not a content host
+* Private 1-to-1 quiz sessions
+* Immediate feedback with instructional hints
 
----
+### Sprint 2 — Group Learning (Carefully Designed)
 
-## 🔐 Privacy
-- No phone numbers are collected
-- Only Telegram user IDs are used
-- No personal performance data is publicly exposed
-- Future leaderboards will display anonymous or top-ranked results only
+* Timed group sessions
+* Delayed result reveal
+* **Top-3 only**, no public error lists
+
+### Sprint 3 — Learning Analytics (Ethical)
+
+* Subject-level weakness detection
+* Personal progress summaries
+* Exportable reports for *students*, not rankings
 
 ---
 
 ## 🤝 Contributing
-Contributions via Issues, Discussions, and Pull Requests are welcome.
+
+Contributions are welcome — **with constraints**.
 
 Please ensure:
-- Clear and readable code
-- Alignment with the project’s learning-first philosophy
-- No features beyond the current sprint scope
+
+* Code clarity over cleverness
+* Alignment with learning-first philosophy
+* No features that increase pressure, exposure or shame
+
+If a feature makes students afraid to try — it does not belong here.
 
 ---
 
 ## 📜 License
 
 MIT License
-
-You are free to use, modify, and redistribute this project with attribution.
+Free to use, modify, and redistribute with attribution.
 
 ---
 
-## 🙏 Acknowledgement
+## 🙏 Closing Note
 
-This project aims to provide SPM students with a learning environment that:
-- Does not shame mistakes
-- Encourages attempts
-- Respects individual learning pace
+Project Kancil exists for one reason:
+
+> **To give students permission to try, fail and learn — quietly, safely and honestly.**
+
+If this project helps even one student attempt a question they were afraid of — it has already succeeded.
+
+---
